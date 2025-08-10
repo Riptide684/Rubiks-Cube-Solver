@@ -1,6 +1,5 @@
 #include <array>
 #include <cstdint>
-#include <unordered_set>
 
 
 struct Move {
@@ -37,9 +36,6 @@ struct MoveEqual {
         return a == b;
     }
 };
-
-
-typedef std::unordered_set<Move, MoveHash, MoveEqual> layer;
 
 
 constexpr Move IDENTITY = {

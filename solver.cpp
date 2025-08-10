@@ -1,7 +1,7 @@
 #include <iostream>
 #include <vector>
-#include <algorithm>
 #include <chrono>
+#include <unordered_set>
 #include "constants.h"
 
 
@@ -46,40 +46,35 @@ void display(const Move& move) {
 class Solver {
     public:
     const Move goal;
-    std::vector<layer> layers;
+    std::vector<int> layer_sizes;
+    std::vector<Move> layer;
+    std::unordered_set<Move, MoveHash, MoveEqual> seen;
 
     Solver(const Move& start) : goal(start) {
-        layers.push_back({IDENTITY});
-    }
-
-    bool already_searched(const Move& move, int i) {
-        for (int j=0; j<=i; j++) {
-            layer& layer = layers[j];
-            if (layer.find(move) != layer.end()) {
-                return true;
-            }
-        }
-
-        return false;
+        layer_sizes.push_back(1);
+        layer.push_back(IDENTITY);
+        seen.insert(IDENTITY);
     }
 
     void next_layer(int i) {
         // populates layer i
-        layers.push_back({});
-        layer& new_layer = layers[i];
-        layer& prev_layer = layers[i-1];
-        new_layer.reserve(prev_layer.size() * legal_moves.size());
+        std::vector<Move> new_layer;
+        layer_sizes.push_back(0);
+        new_layer.reserve(layer.size() * legal_moves.size());
 
-        for (const Move& perm : prev_layer) {
+        for (const Move& perm : layer) {
             for (const Move& move : legal_moves) {
                 Move new_perm;
                 compose(perm, move, new_perm);
-                // use set for fast lookup
-                if (!already_searched(new_perm, i)) {
-                    new_layer.insert(new_perm);
+                if (seen.find(new_perm) == seen.end()) {
+                    new_layer.push_back(new_perm);
+                    layer_sizes[i]++;
+                    seen.insert(new_perm);
                 }
             }   
         }
+
+        layer = new_layer;
     }
 
     void perft(int depth) {
@@ -90,7 +85,7 @@ class Solver {
             next_layer(i);
             auto end = std::chrono::system_clock::now();
             auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
-            std::cout << layers[i].size() << " positions in layer " << i << "\n\n";
+            std::cout << layer_sizes[i] << " positions in layer " << i << "\n\n";
             std::cout << "Exploring layer " << i << " took " << elapsed.count() << " ms\n" << std::endl;
         }
 
@@ -101,6 +96,6 @@ class Solver {
 
 int main() {
     Solver solver(IDENTITY);
-    solver.perft(4);
+    solver.perft(5);
     return 0;
 }
