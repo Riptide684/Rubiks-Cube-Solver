@@ -46,7 +46,7 @@ void display(const Move& move) {
 class Solver {
     public:
     const Move goal;
-    std::vector<std::vector<Move>> layers;
+    std::vector<layer> layers;
 
     Solver(const Move& start) : goal(start) {
         layers.push_back({IDENTITY});
@@ -54,8 +54,8 @@ class Solver {
 
     bool already_searched(const Move& move, int i) {
         for (int j=0; j<=i; j++) {
-            std::vector<Move>& layer = layers.at(j);
-            if (std::find(layer.begin(), layer.end(), move) != layer.end()) {
+            layer& layer = layers[j];
+            if (layer.find(move) != layer.end()) {
                 return true;
             }
         }
@@ -66,15 +66,17 @@ class Solver {
     void next_layer(int i) {
         // populates layer i
         layers.push_back({});
+        layer& new_layer = layers[i];
+        layer& prev_layer = layers[i-1];
+        new_layer.reserve(prev_layer.size() * legal_moves.size());
 
-        for (const Move& perm : layers.at(i-1)) {
+        for (const Move& perm : prev_layer) {
             for (const Move& move : legal_moves) {
                 Move new_perm;
                 compose(perm, move, new_perm);
                 // use set for fast lookup
-                std::vector<Move>& new_layer = layers.at(i);
                 if (!already_searched(new_perm, i)) {
-                    new_layer.push_back(new_perm);
+                    new_layer.insert(new_perm);
                 }
             }   
         }
@@ -88,7 +90,7 @@ class Solver {
             next_layer(i);
             auto end = std::chrono::system_clock::now();
             auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
-            std::cout << layers.at(i).size() << " positions in layer " << i << "\n\n";
+            std::cout << layers[i].size() << " positions in layer " << i << "\n\n";
             std::cout << "Exploring layer " << i << " took " << elapsed.count() << " ms\n" << std::endl;
         }
 

@@ -1,5 +1,6 @@
 #include <array>
 #include <cstdint>
+#include <unordered_set>
 
 
 struct Move {
@@ -15,6 +16,30 @@ struct Move {
                edge_ori   == other.edge_ori;
     }
 };
+
+struct MoveHash {
+    size_t operator()(const Move& m) const noexcept {
+        size_t h = 0;
+        for (int i = 0; i < 8; ++i) {
+            h = h * 31 + m.corner_pos[i];
+            h = h * 31 + m.corner_ori[i];
+        }
+        for (int i = 0; i < 12; ++i) {
+            h = h * 31 + m.edge_pos[i];
+            h = h * 31 + m.edge_ori[i];
+        }
+        return h;
+    }
+};
+
+struct MoveEqual {
+    bool operator()(const Move& a, const Move& b) const noexcept {
+        return a == b;
+    }
+};
+
+
+typedef std::unordered_set<Move, MoveHash, MoveEqual> layer;
 
 
 constexpr Move IDENTITY = {
