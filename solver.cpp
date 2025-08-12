@@ -1,7 +1,6 @@
 #include <iostream>
 #include <vector>
 #include <chrono>
-#include <unordered_set>
 #include "constants.h"
 
 
@@ -42,18 +41,29 @@ void display(const Move& move) {
     }
 }
 
+Move scramble(std::vector<Move> actions) {
+    Move cube = IDENTITY;
+    for (Move& action : actions) {
+        Move tmp;
+        compose(action, cube, tmp);
+        cube = tmp;
+    }
+    
+    return cube;
+}
+
 
 class Solver {
     public:
     const Move goal;
     std::vector<int> layer_sizes;
     std::vector<Move> layer;
-    std::unordered_set<Move, MoveHash, MoveEqual> seen;
+    std::unordered_map<Move, seq, MoveHash, MoveEqual> seen;
 
     Solver(const Move& start) : goal(start) {
         layer_sizes.push_back(1);
         layer.push_back(IDENTITY);
-        seen.insert(IDENTITY);
+        seen.emplace(IDENTITY, seq {});
     }
 
     void next_layer(int i) {
@@ -69,7 +79,9 @@ class Solver {
                 if (seen.find(new_perm) == seen.end()) {
                     new_layer.push_back(new_perm);
                     layer_sizes[i]++;
-                    seen.insert(new_perm);
+                    seq path = seen[perm];
+                    path.push_back(move.name);
+                    seen.emplace(new_perm, path);
                 }
             }   
         }
@@ -91,11 +103,51 @@ class Solver {
 
         std::cout << "Performance test completed!" << std::endl;
     }
+
+    void solve(int depth=5) {
+        std::cout << "Starting solver: \n" << std::endl;
+
+        for (int i=1; i<=depth; i++) {next_layer(i);}
+
+        std::cout << "All " << depth << " move permutations computed\n";
+        std::cout << "Starting full move computation\n" << std::endl;
+
+        Move res;
+        bool found = 0;
+        Move perm;
+
+        for (const auto& pair : seen) {
+            perm = pair.first;
+            compose(perm, goal, res);
+            if (seen.find(res) != seen.end()) {
+                // perm o goal = res (in seen)
+                found = 1;
+                translate(pair.second, seen[res]);
+                break;
+            }
+        }
+
+        if (found) {
+            std::cout << "Solution Found!" << std::endl;
+        } else {
+            std::cout << "Cube not solvable within " << 2*depth << " moves" << std::endl;
+        }
+    }
+
+    void translate(const seq& p, const seq& q) {
+        for (int i=0; i<q.size(); i++) {
+            std::cout << inverses[q[q.size()-1-i]] << " ";
+        }
+        for (auto move : p) {
+            std::cout << move << " ";
+        }
+        std::cout << std::endl;
+    }
 };
 
 
 int main() {
-    Solver solver(IDENTITY);
-    solver.perft(5);
+    Solver solver(scramble({R, U2, F_, L2, D, B_, R_, U, F2, D_, L, U_}));
+    solver.solve(6);
     return 0;
 }
