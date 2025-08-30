@@ -17,16 +17,41 @@ struct Move {
                edge_pos   == other.edge_pos &&
                edge_ori   == other.edge_ori;
     }
+
+    bool operator<(const Move& other) const noexcept {
+        // lexicographic ordering
+        for (int i=0; i<8; i++) {
+            if (corner_pos[i] > other.corner_pos[i]) {return false;}
+            if (corner_pos[i] < other.corner_pos[i]) {return true;}
+        }
+
+        for (int i=0; i<8; i++) {
+            if (corner_ori[i] > other.corner_ori[i]) {return false;}
+            if (corner_ori[i] < other.corner_ori[i]) {return true;}
+        }
+
+        for (int i=0; i<12; i++) {
+            if (edge_pos[i] > other.edge_pos[i]) {return false;}
+            if (edge_pos[i] < other.edge_pos[i]) {return true;}
+        }
+
+        for (int i=0; i<12; i++) {
+            if (edge_ori[i] > other.edge_ori[i]) {return false;}
+            if (edge_ori[i] < other.edge_ori[i]) {return true;}
+        }
+
+        return false;
+    }
 };
 
 struct MoveHash {
     size_t operator()(const Move& m) const noexcept {
         size_t h = 0;
-        for (int i = 0; i < 8; ++i) {
+        for (int i = 0; i < 8; i++) {
             h = h * 31 + m.corner_pos[i];
             h = h * 31 + m.corner_ori[i];
         }
-        for (int i = 0; i < 12; ++i) {
+        for (int i = 0; i < 12; i++) {
             h = h * 31 + m.edge_pos[i];
             h = h * 31 + m.edge_ori[i];
         }
