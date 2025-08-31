@@ -1,7 +1,13 @@
 #include <iostream>
 #include <vector>
 #include <chrono>
+#include <algorithm>
+#include <map>
 #include "constants.h"
+#include "tree.h"
+
+
+typedef std::pair<Move, Move> MovePair;
 
 
 inline void compose(const Move& p, const Move& q, Move& r) {
@@ -104,50 +110,74 @@ class Solver {
         std::cout << "Performance test completed!" << std::endl;
     }
 
-    void solve(int depth=5) {
+    void solve() {
         std::cout << "Starting solver: \n" << std::endl;
+        std::cout << "Computing 5-moves\n" << std::endl;
 
-        for (int i=1; i<=depth; i++) {next_layer(i);}
+        // generate all 5-moves
+        for (int i=1; i<=5; i++) {next_layer(i);}
 
-        std::cout << "All " << depth << " move permutations computed\n";
-        std::cout << "Starting full move computation\n" << std::endl;
 
-        Move res;
-        bool found = 0;
-        Move perm;
+        // sort 5-moves lexicographically
+        std::vector<Move> five_moves;
+        five_moves.reserve(seen.size());
 
-        for (const auto& pair : seen) {
-            perm = pair.first;
-            compose(perm, goal, res);
-            if (seen.find(res) != seen.end()) {
-                // perm o goal = res (in seen)
-                found = 1;
-                translate(pair.second, seen[res]);
-                break;
-            }
+        for (const auto& [move, _] : seen) {
+            five_moves.push_back(move);
         }
 
-        if (found) {
-            std::cout << "Solution Found!" << std::endl;
-        } else {
-            std::cout << "Cube not solvable within " << 2*depth << " moves" << std::endl;
-        }
-    }
+        std::sort(five_moves.begin(), five_moves.end());
 
-    void translate(const seq& p, const seq& q) {
-        for (int i=0; i<q.size(); i++) {
-            std::cout << inverses[q[q.size()-1-i]] << " ";
+
+        // put 5-moves into a trie
+        std::cout << "Creating move tree\n" << std::endl;
+        std::vector<std::vector<int>> five_moves_seq;
+        for (const Move& move : five_moves) {
+            five_moves_seq.push_back(two_row(move));
         }
-        for (auto move : p) {
-            std::cout << move << " ";
+        std::cout << "AAAAAAA" << std::endl;
+        auto start = std::chrono::system_clock::now();
+        Tree five_moves_tree(five_moves_seq);
+        auto end = std::chrono::system_clock::now();
+        auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
+        std::cout << elapsed.count() << std::endl;
+
+
+        // initialise 10-moves and queue
+        std::map<Move, MovePair> ten_moves;
+        std::map<Move, MovePair> queue;
+
+        std::cout << "Computing 10-moves" << std::endl;
+
+        for (Move move : five_moves) {
+            Move res;
+            MovePair p = {five_moves[0], move};
+            compose(five_moves[0], move, res);
+            queue.emplace(res, p);
         }
-        std::cout << std::endl;
+
+
+        // generate all 10-moves
+        while (!queue.empty()) {
+            ten_moves.emplace(queue.begin()->first, queue.begin()->second);
+            // find smallest next v (if successor)
+            Move x = IDENTITY;
+            Move y = IDENTITY;
+            Move z = IDENTITY;
+            MovePair next = {y, z};
+            // find smallest next ^
+            queue.erase(queue.begin());
+            // add if not in
+            queue.emplace(x, next);
+        }
+
+        std::cout << "10-moves computed" << std::endl;
     }
 };
 
 
 int main() {
-    Solver solver(scramble({R, U2, F_, L2, D, B_, R_, U, F2, D_, L, U_}));
-    solver.solve(6);
+    Solver solver(IDENTITY);
+    solver.solve();
     return 0;
 }
