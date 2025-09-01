@@ -10,6 +10,7 @@ struct Move {
     std::array<uint8_t, 12> edge_pos;
     std::array<uint8_t, 12> edge_ori;
     std::string_view name;
+    std::array<int, 48> two_row;
 
     bool operator==(const Move& other) const noexcept {
         return corner_pos == other.corner_pos &&
@@ -20,24 +21,9 @@ struct Move {
 
     bool operator<(const Move& other) const noexcept {
         // lexicographic ordering
-        for (int i=0; i<8; i++) {
-            if (corner_pos[i] > other.corner_pos[i]) {return false;}
-            if (corner_pos[i] < other.corner_pos[i]) {return true;}
-        }
-
-        for (int i=0; i<8; i++) {
-            if (corner_ori[i] > other.corner_ori[i]) {return false;}
-            if (corner_ori[i] < other.corner_ori[i]) {return true;}
-        }
-
-        for (int i=0; i<12; i++) {
-            if (edge_pos[i] > other.edge_pos[i]) {return false;}
-            if (edge_pos[i] < other.edge_pos[i]) {return true;}
-        }
-
-        for (int i=0; i<12; i++) {
-            if (edge_ori[i] > other.edge_ori[i]) {return false;}
-            if (edge_ori[i] < other.edge_ori[i]) {return true;}
+        for (int i=0; i<48; i++) {
+            if (two_row[i] > other.two_row[i]) {return false;}
+            if (two_row[i] < other.two_row[i]) {return true;}
         }
 
         return false;

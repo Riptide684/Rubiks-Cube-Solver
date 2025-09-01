@@ -48,22 +48,19 @@ int apply_move(const Move& move, int cube) {
     }
 }
 
-std::vector<int> two_row(const Move& move) {
+void two_row(Move& move) {
     // returns the move permutation in two row notation
     // order by corners then edges, and increasing orientations
-    std::vector<int> row;
     for (int i=0; i<48; i++) {
-        row.push_back(apply_move(move, i));
+        move.two_row[i] = apply_move(move, i);
     }
-
-    return row;
 }
 
-std::vector<int> inverse(const std::vector<int>& x) {
+std::vector<int> inverse(const Move& x) {
     std::vector<int> y;
 
     for (int i=0; i<48; i++) {
-        y.push_back(index(x, i));
+        y.push_back(index(x.two_row, i));
     }
 
     return y;
@@ -83,6 +80,7 @@ struct Vertex {
     std::map<int, Vertex*> children;
     Vertex* parent;
     std::optional<Move> move;
+    int letter;
 };
 
 
@@ -98,13 +96,14 @@ class Tree {
     }
 
     void insert(const Move& move) {
-        const std::vector<int> seq = two_row(move);
+        const std::array<int, 48> seq = move.two_row;
         Vertex* node = root;
 
         for (int val : seq) {
             if (!node->children.count(val)) {
                 node->children[val] = new Vertex();
                 node->children[val]->parent = node;
+                node->children[val]->letter = val;
             }
             node = node->children[val];
         }
@@ -124,26 +123,19 @@ class Tree {
     }
 
     Vertex* next_leaf(const std::vector<int>& order, Vertex* leaf) {
-    //     // traverses tree wrt given order to find next leaf
-    //     Vertex* node = leaf;
-    //     int letter;
+        // traverses tree wrt given order to find next leaf
+        Vertex* node = leaf;
 
-    //     while (true) {
-    //         if (!node->parent) {return nullptr;}
+        while (true) {
+            if (!node->parent) {return nullptr;}
 
-    //         letter = index(node->parent->children, node);
+            for (int i=index(order, node->letter)+1; i<48; i++) {
+                if (node->parent->children.count(order[i])) {
+                    return smallest_leaf(order, node->parent->children[order[i]]);
+                }
+            }
 
-    //         for (int i=index(order, letter)+1; i<48; i++) {
-    //             if (node->parent->children[i]) {
-    //                 node = node->parent->children[i];
-    //                 break;
-    //             }
-    //         }
-
-    //         node = node->parent;
-    //     }
-
-    //     return smallest_leaf(order, node);
-        return new Vertex();
+            node = node->parent;
+        }
     }
 };

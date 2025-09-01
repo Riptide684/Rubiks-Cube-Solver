@@ -122,8 +122,10 @@ class Solver {
         std::vector<Move> five_moves;
         five_moves.reserve(seen.size());
 
-        for (const auto& move : seen) {
-            five_moves.push_back(move.first);
+        for (const auto& move_map : seen) {
+            Move move = move_map.first;
+            two_row(move);
+            five_moves.push_back(move);
         }
 
         // put 5-moves into a trie
@@ -138,45 +140,55 @@ class Solver {
 
         std::cout << "Computing 10-moves" << std::endl;
 
-        std::vector<int> order = two_row(IDENTITY);
-        Move res;
+        std::vector<int> order;
         Vertex* x;
-        int count = 0;
-        int big = 0;
-        int step = floor(five_moves.size() / 100);
+        Move res;
+
         for (Move y : five_moves) {
-            //order = inverse(two_row(y));
+            order = inverse(y);
             x = five_moves_tree.smallest_leaf(order, five_moves_tree.root);
             compose(y, *x->move, res);
+            two_row(res);
             queue.emplace(res, std::make_tuple(x, y, order));
-            count++;
-            if (count >= (big+1)*step) {
-                big++;
-                std::cout << big << std::endl;
-            }
         }
-        std::cout << "DONE" << std::endl;
-        return;
+
+        std::cout << "init done" << std::endl;
+
+
         // generate all 10-moves
+        VertexTuple smallest;
+        Move y;
+        VertexTuple next;
+        uint64_t count = 0;
+        uint64_t big = 0;
+        uint64_t step = floor(queue.size() * queue.size() / 1000);
         while (!queue.empty()) {
-            VertexTuple smallest = queue.begin()->second;
-            MovePair p = std::make_pair(*std::get<0>(smallest)->move, std::get<1>(smallest));
-            ten_moves.emplace(queue.begin()->first, p);
+            smallest = queue.begin()->second;
+            x = std::get<0>(smallest);
+            y = std::get<1>(smallest);
+            order = std::get<2>(smallest);
+            ten_moves.emplace(queue.begin()->first, std::make_pair(*x->move, y));
             queue.erase(queue.begin());
-            Vertex* x = std::get<0>(smallest);
 
             while (true) {
-                x = five_moves_tree.next_leaf(std::get<2>(smallest), x);
+                x = five_moves_tree.next_leaf(order, x);
+                count++;
+                if (count >= (big+1)*step) {
+                    std::cout << big << std::endl;
+                    big++;
+                }
                 if (!x) {break;}
-                Move res;
-                compose(std::get<1>(smallest), *x->move, res);
+                compose(y, *x->move, res);
+                two_row(res);
                 if (!queue.count(res)) {
-                    VertexTuple next = {x, std::get<1>(smallest), std::get<2>(smallest)};
-                    queue.emplace(res, next);
+                    next = {x, y, order};
+                    //queue.emplace(res, next);
                     break;
                 }
             }
         }
+
+        std::cout << ten_moves.size() << std::endl;
 
         std::cout << "10-moves computed" << std::endl;
     }
