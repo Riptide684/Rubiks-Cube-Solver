@@ -8,6 +8,7 @@
 
 
 typedef std::pair<Move, Move> MovePair;
+typedef std::tuple<Vertex*, Move, std::vector<int>> VertexTuple;
 
 
 inline void compose(const Move& p, const Move& q, Move& r) {
@@ -112,63 +113,69 @@ class Solver {
 
     void solve() {
         std::cout << "Starting solver: \n" << std::endl;
-        std::cout << "Computing 5-moves\n" << std::endl;
 
         // generate all 5-moves
+        std::cout << "Computing 5-moves\n" << std::endl;
+
         for (int i=1; i<=5; i++) {next_layer(i);}
-
-
-        // sort 5-moves lexicographically
+        
         std::vector<Move> five_moves;
         five_moves.reserve(seen.size());
 
-        for (const auto& [move, _] : seen) {
-            five_moves.push_back(move);
+        for (const auto& move : seen) {
+            five_moves.push_back(move.first);
         }
-
-        std::sort(five_moves.begin(), five_moves.end());
-
 
         // put 5-moves into a trie
         std::cout << "Creating move tree\n" << std::endl;
-        std::vector<std::vector<int>> five_moves_seq;
-        for (const Move& move : five_moves) {
-            five_moves_seq.push_back(two_row(move));
-        }
-        std::cout << "AAAAAAA" << std::endl;
-        auto start = std::chrono::system_clock::now();
-        Tree five_moves_tree(five_moves_seq);
-        auto end = std::chrono::system_clock::now();
-        auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
-        std::cout << elapsed.count() << std::endl;
+
+        Tree five_moves_tree(five_moves);
 
 
         // initialise 10-moves and queue
         std::map<Move, MovePair> ten_moves;
-        std::map<Move, MovePair> queue;
+        std::map<Move, VertexTuple> queue;
 
         std::cout << "Computing 10-moves" << std::endl;
 
-        for (Move move : five_moves) {
-            Move res;
-            MovePair p = {five_moves[0], move};
-            compose(five_moves[0], move, res);
-            queue.emplace(res, p);
+        std::vector<int> order = two_row(IDENTITY);
+        Move res;
+        Vertex* x;
+        int count = 0;
+        int big = 0;
+        int step = floor(five_moves.size() / 100);
+        for (Move y : five_moves) {
+            //order = inverse(two_row(y));
+            x = five_moves_tree.smallest_leaf(order, five_moves_tree.root);
+            compose(y, *x->move, res);
+            queue.emplace(res, std::make_tuple(x, y, order));
+            count++;
+            if (count >= (big+1)*step) {
+                big++;
+                std::cout << big << std::endl;
+            }
         }
-
-
+        std::cout << "DONE" << std::endl;
+        return;
         // generate all 10-moves
         while (!queue.empty()) {
-            ten_moves.emplace(queue.begin()->first, queue.begin()->second);
-            // find smallest next v (if successor)
-            Move x = IDENTITY;
-            Move y = IDENTITY;
-            Move z = IDENTITY;
-            MovePair next = {y, z};
-            // find smallest next ^
+            VertexTuple smallest = queue.begin()->second;
+            MovePair p = std::make_pair(*std::get<0>(smallest)->move, std::get<1>(smallest));
+            ten_moves.emplace(queue.begin()->first, p);
             queue.erase(queue.begin());
-            // add if not in
-            queue.emplace(x, next);
+            Vertex* x = std::get<0>(smallest);
+
+            while (true) {
+                x = five_moves_tree.next_leaf(std::get<2>(smallest), x);
+                if (!x) {break;}
+                Move res;
+                compose(std::get<1>(smallest), *x->move, res);
+                if (!queue.count(res)) {
+                    VertexTuple next = {x, std::get<1>(smallest), std::get<2>(smallest)};
+                    queue.emplace(res, next);
+                    break;
+                }
+            }
         }
 
         std::cout << "10-moves computed" << std::endl;
